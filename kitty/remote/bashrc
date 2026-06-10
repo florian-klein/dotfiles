@@ -1,0 +1,20 @@
+# Synced by kitten ssh — bootstraps the zsh environment and hands off to zsh.
+# Escape hatch: run `NO_ZSH=1 bash -l` (or ssh ... -t 'NO_ZSH=1 bash -l') to stay in bash.
+
+# Interactive shells only
+case $- in *i*) ;; *) return ;; esac
+
+export PATH="$HOME/.local/bin:$PATH"
+
+# First connection on a host without zsh: install everything (one-time)
+if ! command -v zsh >/dev/null 2>&1 \
+   && [ -f "$HOME/.zsh-bootstrap.sh" ] \
+   && [ ! -f "$HOME/.local/state/zsh-bootstrap.done" ] \
+   && [ -t 0 ]; then
+  sh "$HOME/.zsh-bootstrap.sh"
+fi
+
+# Hand off to zsh
+if [ -z "${NO_ZSH:-}" ] && command -v zsh >/dev/null 2>&1; then
+  exec zsh -l
+fi

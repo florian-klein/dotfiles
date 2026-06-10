@@ -1,0 +1,268 @@
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+# Initialization code that may require console input (password prompts, [y/n]
+# confirmations, etc.) must go above this block; everything else may go below.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+# ===== Shell Options =====
+bindkey -e                       # Emacs keymap (explicit, independent of $EDITOR)
+setopt AUTO_CD                   # Type a directory name to cd into it
+setopt INTERACTIVE_COMMENTS      # Allow # comments on the command line
+
+# ===== History Configuration =====
+HISTFILE=~/.zsh_history
+HISTSIZE=50000
+SAVEHIST=50000
+setopt EXTENDED_HISTORY          # Write timestamp to history
+setopt HIST_EXPIRE_DUPS_FIRST    # Expire duplicates first
+setopt HIST_IGNORE_DUPS          # Ignore consecutive duplicates
+setopt HIST_IGNORE_SPACE         # Ignore commands starting with space
+setopt HIST_VERIFY               # Show command before executing from history
+setopt SHARE_HISTORY             # Share history between sessions
+setopt INC_APPEND_HISTORY        # Add commands immediately
+
+# ===== Environment =====
+export PKG_CONFIG_PATH=/opt/homebrew/opt/curl/lib/pkgconfig
+export RUST_MIN_STACK=16777216
+
+export PATH=/Library/TeX/texbin:$PATH
+export PATH=$HOME/.cargo/bin:$PATH
+export PATH=$HOME/.local/bin:$PATH
+export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
+export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+export JAVA_HOME="/opt/homebrew/opt/openjdk@17"
+export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"
+export PATH="/opt/homebrew/opt/bison/bin:$PATH"
+export PATH="/opt/homebrew/opt/flex/bin:$PATH"
+export PATH="/opt/homebrew/opt/curl/bin:$PATH"
+export PATH="/usr/local/texlive/texmf-local:$PATH"
+export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
+
+# ===== Completion =====
+# uv/uvx completions are cached in ~/.zsh_completions (regenerate with:
+#   uv generate-shell-completion zsh > ~/.zsh_completions/_uv
+#   uvx --generate-shell-completion zsh > ~/.zsh_completions/_uvx)
+fpath=(~/.zsh_completions $fpath)
+
+# compinit with a daily cache: full (secure-dir-check skipped, was
+# ZSH_DISABLE_COMPFIX under oh-my-zsh) once per day, -C otherwise
+autoload -Uz compinit
+if [[ -n $(find ~/.zcompdump -mtime +1 2>/dev/null) || ! -f ~/.zcompdump ]]; then
+  compinit -u
+else
+  compinit -C
+fi
+
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'  # case-insensitive
+zstyle ':completion:*' menu no                             # fzf-tab draws the menu
+zstyle ':completion:*:descriptions' format '[%d]'
+zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+
+# ===== Plugins (replaces oh-my-zsh) =====
+# HOMEBREW_PREFIX is set by brew shellenv in .zprofile (Apple Silicon or Intel)
+_bp=${HOMEBREW_PREFIX:-/opt/homebrew}
+[[ -r $_bp/share/powerlevel10k/powerlevel10k.zsh-theme ]] && source $_bp/share/powerlevel10k/powerlevel10k.zsh-theme
+[[ -r ~/.zsh/plugins/fzf-tab/fzf-tab.plugin.zsh ]] && source ~/.zsh/plugins/fzf-tab/fzf-tab.plugin.zsh
+[[ -r $_bp/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]] && source $_bp/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+[[ -r $_bp/share/zsh-fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh ]] && source $_bp/share/zsh-fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
+unset _bp
+
+# fzf-tab previews
+zstyle ':fzf-tab:*' use-fzf-default-opts yes
+zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza --tree --icons --level=2 --color=always $realpath'
+zstyle ':fzf-tab:complete:(\\|*/|)z:*' fzf-preview 'eza --tree --icons --level=2 --color=always $realpath'
+
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+# >>> conda initialize (lazy-loaded) >>>
+# Conda is only initialized when first called, saving ~300ms on every shell startup
+conda() {
+  unfunction conda
+  __conda_setup="$("$HOME/miniconda3/bin/conda" 'shell.zsh' 'hook' 2>/dev/null)"
+  if [ $? -eq 0 ]; then
+    eval "$__conda_setup"
+  else
+    if [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
+      . "$HOME/miniconda3/etc/profile.d/conda.sh"
+    else
+      export PATH="$HOME/miniconda3/bin:$PATH"
+    fi
+  fi
+  unset __conda_setup
+  conda "$@"
+}
+# Also lazy-load common conda subcommands so they trigger init
+for _cmd in activate deactivate mamba; do
+  eval "${_cmd}() { unfunction ${_cmd} 2>/dev/null; conda ${_cmd} \"\$@\"; }"
+done
+unset _cmd
+# <<< conda initialize <<<
+
+# OCaml related
+[[ ! -r $HOME/.opam/opam-init/init.zsh ]] || source $HOME/.opam/opam-init/init.zsh  > /dev/null 2> /dev/null
+
+# bun completions
+[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
+
+# ===== SSH =====
+# Override ssh to use kitty's ssh kitten when running inside kitty
+# This auto-copies terminfo + ~/.tmux.conf to remote hosts (see ~/.config/kitty/ssh.conf)
+if [ -n "$KITTY_WINDOW_ID" ]; then
+    alias ssh='kitten ssh'
+fi
+
+# SSH shortcuts and other machine-/host-specific config live in ~/.zshrc.local
+# (untracked — this repo is public), sourced at the end of this file.
+
+# ===== Aliases =====
+alias pyslicer="/Applications/Slicer.app/Contents/MacOS/Slicer --no-splash --no-main-window --python-script"
+alias jdclean='rm -rf ~/.cache/nvim/jdtls/*'
+alias besch='bash'
+alias valeksa='nvim'
+alias kliero='clear'
+alias pipml="$HOME/miniconda3/envs/machine-learning/bin/pip3"
+alias gs='git status'
+alias gc='git commit'
+alias ga='git add .'
+alias ls='eza --icons'
+alias ll='eza -la --icons --git'
+alias la='eza -a --icons'
+alias lt='eza --tree --icons --level=2'
+alias google='bash ~/bin/google.sh'
+alias safari='open /Applications/Safari.app'
+alias zshconfig='nvim ~/.zshrc'
+alias nvconfig='cd ~/.config/nvim/'
+alias nvplugins='nvim ~/.config/nvim/lua/custom/plugins.lua'
+alias brow='arch --x86_64 /usr/local/Homebrew/bin/brew'
+alias arm="env /usr/bin/arch -arm64 /bin/zsh --login"
+alias intel="env /usr/bin/arch -x86_64 /bin/zsh --login"
+alias claude='CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 claude'
+alias copen="bash ~/bin/cloneOpen.sh"
+alias icloud="bash ~/bin/icloud.sh"
+alias moodle_download="bash ~/bin/moodleDownload.sh"
+alias desktop="cd ~/Desktop/"
+alias 3sm="cd ~/Desktop/Universität/3.\ Semester/"
+
+# ===== Directory Navigation =====
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+alias .....='cd ../../../..'
+alias -- -='cd -'  # Go to previous directory
+
+# ===== Functions =====
+# Git quick push
+gp() {
+  git add . && git commit -m "$1" && git push
+}
+
+# Extract any archive type
+extract() {
+  if [[ -f "$1" ]]; then
+    case "$1" in
+      *.tar.bz2)   tar xjf "$1"     ;;
+      *.tar.gz)    tar xzf "$1"     ;;
+      *.tar.xz)    tar xJf "$1"     ;;
+      *.bz2)       bunzip2 "$1"     ;;
+      *.rar)       unrar x "$1"     ;;
+      *.gz)        gunzip "$1"      ;;
+      *.tar)       tar xf "$1"      ;;
+      *.tbz2)      tar xjf "$1"     ;;
+      *.tgz)       tar xzf "$1"     ;;
+      *.zip)       unzip "$1"       ;;
+      *.Z)         uncompress "$1"  ;;
+      *.7z)        7z x "$1"        ;;
+      *)           echo "'$1' cannot be extracted via extract()" ;;
+    esac
+  else
+    echo "'$1' is not a valid file"
+  fi
+}
+
+# Make directory and cd into it
+mkcd() {
+  mkdir -p "$1" && cd "$1"
+}
+
+# Quick find file
+ff() {
+  find . -type f -iname "*$1*"
+}
+
+# yazi: file manager that cd's into the directory you quit from
+y() {
+  local tmp cwd
+  tmp="$(mktemp -t yazi-cwd.XXXXXX)"
+  yazi "$@" --cwd-file="$tmp"
+  if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+    builtin cd -- "$cwd"
+  fi
+  rm -f -- "$tmp"
+}
+
+# ===== Kitty Notifications =====
+# Usage: knof <command>   — run command, notify when done
+# Usage: <command>; knof  — notify after previous command
+knof() {
+  if [[ $# -eq 0 ]]; then
+    local code=$?
+    if [[ $code -eq 0 ]]; then
+      kitten notify "Done" "Command finished successfully"
+    else
+      kitten notify --icon warn "Failed" "Command exited with code $code"
+    fi
+    return $code
+  fi
+  "$@"
+  local code=$?
+  local cmd="${1##*/}"
+  if [[ $code -eq 0 ]]; then
+    kitten notify "Done" "$cmd finished successfully"
+  else
+    kitten notify --icon warn "Failed" "$cmd exited with code $code"
+  fi
+  return $code
+}
+
+# ===== Keybindings =====
+bindkey '^[[A' history-search-backward  # Up arrow: search history backward
+bindkey '^[[B' history-search-forward   # Down arrow: search history forward
+bindkey '^[[1;5C' forward-word          # Ctrl+Right: move word forward
+bindkey '^[[1;5D' backward-word         # Ctrl+Left: move word backward
+bindkey '^[[H' beginning-of-line        # Home: beginning of line
+bindkey '^[[F' end-of-line              # End: end of line
+
+# ===== Zoxide (fast directory jumping, replaces z) =====
+eval "$(zoxide init zsh)"
+
+# ===== fzf Integration =====
+# Ctrl+T: fuzzy file finder, Alt+C: fuzzy cd (Ctrl+R is handled by atuin below)
+# Cached fzf init (regenerate with: fzf --zsh > ~/.zsh_completions/fzf.zsh)
+[[ -r ~/.zsh_completions/fzf.zsh ]] && source ~/.zsh_completions/fzf.zsh
+export FZF_ALT_C_OPTS="--preview 'eza --tree --icons --level=2 {}'"
+export FZF_CTRL_T_OPTS="--preview 'bat --color=always --line-range :50 {}'"
+# Gruvbox accents; fg/bg omitted so text inherits the terminal's white-on-black
+export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border \
+--color=bg+:#3c3836,spinner:#fb4934,hl:#fe8019 \
+--color=header:#fe8019,info:#fabd2f,pointer:#fb4934 \
+--color=marker:#fb4934,fg+:#ffffff,prompt:#fabd2f,hl+:#fe8019 \
+--color=border:#504945,selected-bg:#504945"
+
+# ===== Atuin (history database, Ctrl+R) =====
+# Sourced after fzf so atuin owns the Ctrl+R binding; up arrow stays
+# zsh's history-search-backward. Cached init (regenerate after atuin upgrades:
+# atuin init zsh --disable-up-arrow --disable-ai > ~/.zsh_completions/atuin.zsh)
+[[ -r ~/.zsh_completions/atuin.zsh ]] && source ~/.zsh_completions/atuin.zsh
+
+# ===== PATH Deduplication =====
+# Remove duplicate entries from PATH (keeps first occurrence)
+typeset -U PATH path
+
+# ===== Machine-local config (untracked: SSH host aliases, secrets, etc.) =====
+[[ -f ~/.zshrc.local ]] && source ~/.zshrc.local

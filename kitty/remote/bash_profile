@@ -1,0 +1,2 @@
+# Synced by kitten ssh — make login bash read .bashrc (which hands off to zsh)
+[ -f "$HOME/.bashrc" ] && . "$HOME/.bashrc"

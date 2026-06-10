@@ -1,0 +1,145 @@
+# Remote zshrc — synced automatically on every kitten ssh connection.
+# Source of truth: ~/.config/kitty/remote/zshrc on the LOCAL machine.
+# Edits made directly on a remote host will be overwritten on the next connect.
+
+# One-time bootstrap: installs zsh plugins + tools into ~/.local (see
+# ~/.zsh-bootstrap.sh). Runs before the instant prompt since it prints output.
+if [[ -o interactive && ! -f ~/.local/state/zsh-bootstrap.done && -f ~/.zsh-bootstrap.sh ]]; then
+  sh ~/.zsh-bootstrap.sh
+fi
+
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+# ===== Environment =====
+export PATH="$HOME/.local/bin:$HOME/.fzf/bin:$PATH"
+command -v nvim >/dev/null && export EDITOR=nvim
+
+# ===== Shell Options =====
+bindkey -e
+setopt AUTO_CD
+setopt INTERACTIVE_COMMENTS
+
+# ===== History Configuration =====
+HISTFILE=~/.zsh_history
+HISTSIZE=50000
+SAVEHIST=50000
+setopt EXTENDED_HISTORY
+setopt HIST_EXPIRE_DUPS_FIRST
+setopt HIST_IGNORE_DUPS
+setopt HIST_IGNORE_SPACE
+setopt HIST_VERIFY
+setopt SHARE_HISTORY
+setopt INC_APPEND_HISTORY
+
+# ===== Completion =====
+autoload -Uz compinit
+if [[ -n $(find ~/.zcompdump -mtime +1 2>/dev/null) || ! -f ~/.zcompdump ]]; then
+  compinit -u
+else
+  compinit -C
+fi
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
+zstyle ':completion:*' menu no
+zstyle ':completion:*:descriptions' format '[%d]'
+
+# ===== Plugins (installed by bootstrap into ~/.zsh/plugins) =====
+_plug=~/.zsh/plugins
+[[ -r $_plug/powerlevel10k/powerlevel10k.zsh-theme ]] && source $_plug/powerlevel10k/powerlevel10k.zsh-theme
+[[ -r $_plug/fzf-tab/fzf-tab.plugin.zsh ]] && source $_plug/fzf-tab/fzf-tab.plugin.zsh
+[[ -r $_plug/zsh-autosuggestions/zsh-autosuggestions.zsh ]] && source $_plug/zsh-autosuggestions/zsh-autosuggestions.zsh
+[[ -r $_plug/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh ]] && source $_plug/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
+unset _plug
+
+zstyle ':fzf-tab:*' use-fzf-default-opts yes
+if command -v eza >/dev/null; then
+  zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza --tree --icons --level=2 --color=always $realpath'
+fi
+
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+# ===== Aliases =====
+if command -v eza >/dev/null; then
+  alias ls='eza --icons'
+  alias ll='eza -la --icons --git'
+  alias la='eza -a --icons'
+  alias lt='eza --tree --icons --level=2'
+else
+  alias ll='ls -la'
+  alias la='ls -a'
+fi
+command -v nvim >/dev/null && alias vim='nvim' && alias vi='nvim'
+command -v bat >/dev/null && alias cat='bat --paging=never'
+alias gs='git status'
+alias gc='git commit'
+alias ga='git add .'
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+alias .....='cd ../../../..'
+alias -- -='cd -'
+
+# ===== Functions =====
+gp() {
+  git add . && git commit -m "$1" && git push
+}
+
+extract() {
+  if [[ -f "$1" ]]; then
+    case "$1" in
+      *.tar.bz2)   tar xjf "$1"     ;;
+      *.tar.gz)    tar xzf "$1"     ;;
+      *.tar.xz)    tar xJf "$1"     ;;
+      *.bz2)       bunzip2 "$1"     ;;
+      *.rar)       unrar x "$1"     ;;
+      *.gz)        gunzip "$1"      ;;
+      *.tar)       tar xf "$1"      ;;
+      *.tbz2)      tar xjf "$1"     ;;
+      *.tgz)       tar xzf "$1"     ;;
+      *.zip)       unzip "$1"       ;;
+      *.Z)         uncompress "$1"  ;;
+      *.7z)        7z x "$1"        ;;
+      *)           echo "'$1' cannot be extracted via extract()" ;;
+    esac
+  else
+    echo "'$1' is not a valid file"
+  fi
+}
+
+mkcd() {
+  mkdir -p "$1" && cd "$1"
+}
+
+ff() {
+  find . -type f -iname "*$1*"
+}
+
+# ===== Keybindings =====
+bindkey '^[[A' history-search-backward
+bindkey '^[[B' history-search-forward
+bindkey '^[[1;5C' forward-word
+bindkey '^[[1;5D' backward-word
+bindkey '^[[H' beginning-of-line
+bindkey '^[[F' end-of-line
+
+# ===== Zoxide =====
+command -v zoxide >/dev/null && eval "$(zoxide init zsh)"
+
+# ===== fzf Integration (Ctrl+R history, Ctrl+T files, Alt+C cd) =====
+if command -v fzf >/dev/null; then
+  source <(fzf --zsh 2>/dev/null)
+  command -v eza >/dev/null && export FZF_ALT_C_OPTS="--preview 'eza --tree --icons --level=2 {}'"
+  command -v bat >/dev/null && export FZF_CTRL_T_OPTS="--preview 'bat --color=always --line-range :50 {}'"
+fi
+# Gruvbox accents; fg/bg omitted so text inherits the terminal's white-on-black
+export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border \
+--color=bg+:#3c3836,spinner:#fb4934,hl:#fe8019 \
+--color=header:#fe8019,info:#fabd2f,pointer:#fb4934 \
+--color=marker:#fb4934,fg+:#ffffff,prompt:#fabd2f,hl+:#fe8019 \
+--color=border:#504945,selected-bg:#504945"
+
+# ===== PATH Deduplication =====
+typeset -U PATH path

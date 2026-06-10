@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rustup +nightly component add:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.schemecolor.com)",
+      "Bash(tree:*)",
+      "WebFetch(domain:docs.astral.sh)",
+      "WebFetch(domain:mason-registry.dev)",
+      "Bash(ruff:*)",
+      "Bash(kitty @:*)",
+      "Bash(sqlite3:*)",
+      "Bash(git stash:*)",
+      "WebFetch(domain:neovim.io)"
+    ]
+  }
+}

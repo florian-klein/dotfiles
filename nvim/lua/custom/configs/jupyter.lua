@@ -1,0 +1,70 @@
+-- local jupyter_elements = {
+--   {
+--     "GCBallesteros/NotebookNavigator.nvim",
+--     lazy = true,
+--     ft = { "ipynb", "python" },
+--     keys = function()
+--       if vim.bo.filetype == "ipynb" or vim.bo.filetype == "python" then
+--         return {
+--           {
+--             "<C-d>",
+--             function()
+--               require("notebook-navigator").move_cell "d"
+--             end,
+--           },
+--           {
+--             "<C-u>",
+--             function()
+--               require("notebook-navigator").move_cell "u"
+--             end,
+--           },
+--           { "<leader>X", "<cmd>lua require('notebook-navigator').run_cell()<cr>" },
+--           { "<S-ENTER>", "<cmd>lua require('notebook-navigator').run_and_move()<cr>" },
+--         }
+--       end
+--       return {}
+--     end,
+--     dependencies = {
+--       "echasnovski/mini.comment",
+--       "hkupty/iron.nvim", -- repl provider
+--       -- "akinsho/toggleterm.nvim", -- alternative repl provider
+--       -- "benlubas/molten-nvim", -- alternative repl provider
+--       "anuvyklack/hydra.nvim",
+--     },
+--     config = function()
+--       local nn = require "notebook-navigator"
+--       nn.setup { activate_hydra_keys = "<leader>h" }
+--     end,
+--   },
+--   {
+--     "hkupty/iron.nvim",
+--     config = function()
+--       local iron = require "iron.core"
+--       iron.setup {
+--         config = {
+--           scratch_repl = true,
+--           repl_definition = {
+--             python = {
+--               command = { "ipython" },
+--               format = require("iron.fts.common").bracketed_paste,
+--             },
+--           },
+--           repl_open_cmd = "vertical botright 80 split",
+--         },
+--       }
+--     end,
+--   },
+--   {
+--     "echasnovski/mini.hipatterns",
+--     lazy = true,
+--     ft = { "ipynb", "python" },
+--     dependencies = { "GCBallesteros/NotebookNavigator.nvim" },
+--     opts = function()
+--       local nn = require "notebook-navigator"
+--
+--       local opts = { highlighters = { cells = nn.minihipatterns_spec } }
+--       return opts
+--     end,
+--   },
+-- }
+-- return jupyter_elements
