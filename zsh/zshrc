@@ -229,12 +229,10 @@ unset _bp
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
 # ===== Deferred initialization =====
-# zsh-defer queues ~/.zshrc.lazy to run right after the first prompt renders:
-# compinit, fzf-tab, autosuggestions, syntax highlighting, fzf/atuin/zoxide.
+# ~/.zshrc.lazy queues compinit, fzf-tab, autosuggestions, syntax
+# highlighting and fzf/atuin/zoxide via zsh-defer — they load right after
+# the first prompt, yielding to your keystrokes between slices.
 if [[ -r ~/.zsh/plugins/zsh-defer/zsh-defer.plugin.zsh && -r ~/.zshrc.lazy ]]; then
   source ~/.zsh/plugins/zsh-defer/zsh-defer.plugin.zsh
-  zsh-defer source ~/.zshrc.lazy
-else
-  # Fallback: load synchronously if zsh-defer isn't installed
-  [[ -r ~/.zshrc.lazy ]] && source ~/.zshrc.lazy
+  source ~/.zshrc.lazy
 fi
