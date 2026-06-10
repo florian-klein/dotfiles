@@ -1,0 +1,59 @@
+# Deferred initialization — sourced by zsh-defer right after the first prompt
+# renders (the p10k instant prompt covers the gap). Everything here is off the
+# critical startup path; keep slow things in this file, not in .zshrc.
+
+_bp=${HOMEBREW_PREFIX:-/opt/homebrew}
+
+# OrbStack command-line tools, if installed (moved off the login-shell path)
+source ~/.orbstack/shell/init.zsh 2>/dev/null || :
+
+# ===== Completion =====
+# compinit with a daily cache: full (secure-dir-check skipped) once per day,
+# -C otherwise. Staleness check via zsh glob qualifier — no process spawn.
+autoload -Uz compinit
+_zcd=(~/.zcompdump(N.mh+24))
+if [[ -n $_zcd || ! -f ~/.zcompdump ]]; then
+  compinit -u
+  { rm -f ~/.zcompdump.zwc; zcompile ~/.zcompdump } &!
+else
+  compinit -C
+fi
+unset _zcd
+
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'  # case-insensitive
+zstyle ':completion:*' menu no                             # fzf-tab draws the menu
+zstyle ':completion:*:descriptions' format '[%d]'
+zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+
+# ===== Plugins =====
+[[ -r ~/.zsh/plugins/fzf-tab/fzf-tab.plugin.zsh ]] && source ~/.zsh/plugins/fzf-tab/fzf-tab.plugin.zsh
+[[ -r $_bp/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]] && source $_bp/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+[[ -r $_bp/share/zsh-fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh ]] && source $_bp/share/zsh-fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
+unset _bp
+
+# fzf-tab previews
+zstyle ':fzf-tab:*' use-fzf-default-opts yes
+zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza --tree --icons --level=2 --color=always $realpath'
+zstyle ':fzf-tab:complete:(\\|*/|)z:*' fzf-preview 'eza --tree --icons --level=2 --color=always $realpath'
+
+# OCaml related
+[[ ! -r $HOME/.opam/opam-init/init.zsh ]] || source $HOME/.opam/opam-init/init.zsh  > /dev/null 2> /dev/null
+
+# bun completions
+[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
+
+# ===== Zoxide (fast directory jumping, replaces z) =====
+# Cached init (regenerate: zoxide init zsh > ~/.zsh_completions/zoxide.zsh)
+[[ -r ~/.zsh_completions/zoxide.zsh ]] && source ~/.zsh_completions/zoxide.zsh
+
+# ===== fzf Integration (Ctrl+T files, Alt+C cd) =====
+# Cached fzf init (regenerate with: fzf --zsh > ~/.zsh_completions/fzf.zsh)
+[[ -r ~/.zsh_completions/fzf.zsh ]] && source ~/.zsh_completions/fzf.zsh
+export FZF_ALT_C_OPTS="--preview 'eza --tree --icons --level=2 {}'"
+export FZF_CTRL_T_OPTS="--preview 'bat --color=always --line-range :50 {}'"
+
+# ===== Atuin (history database, Ctrl+R) =====
+# Sourced after fzf so atuin owns the Ctrl+R binding; up arrow stays
+# zsh's history-search-backward. Cached init (regenerate after atuin upgrades:
+# atuin init zsh --disable-up-arrow --disable-ai > ~/.zsh_completions/atuin.zsh)
+[[ -r ~/.zsh_completions/atuin.zsh ]] && source ~/.zsh_completions/atuin.zsh

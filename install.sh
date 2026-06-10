@@ -84,6 +84,7 @@ link() {
 
 log "linking dotfiles…"
 link zsh/zshrc            .zshrc
+link zsh/zshrc.lazy       .zshrc.lazy
 link zsh/zshenv           .zshenv
 link zsh/zprofile         .zprofile
 link zsh/p10k.zsh         .p10k.zsh
@@ -98,11 +99,14 @@ link atuin/config.toml    .config/atuin/config.toml
 link nvim                 .config/nvim
 
 # ── Shell plugins + caches ───────────────────────────────────────────────────
-if [ ! -d "$HOME/.zsh/plugins/fzf-tab" ]; then
-  log "cloning fzf-tab…"
-  git clone --quiet --depth=1 https://github.com/Aloxaf/fzf-tab "$HOME/.zsh/plugins/fzf-tab" \
-    || warn "fzf-tab clone failed"
-fi
+for plug in Aloxaf/fzf-tab romkatv/zsh-defer; do
+  name="${plug##*/}"
+  if [ ! -d "$HOME/.zsh/plugins/$name" ]; then
+    log "cloning $name…"
+    git clone --quiet --depth=1 "https://github.com/$plug" "$HOME/.zsh/plugins/$name" \
+      || warn "$name clone failed"
+  fi
+done
 
 log "generating shell init caches…"
 mkdir -p "$HOME/.zsh_completions"
@@ -114,7 +118,8 @@ command -v zoxide >/dev/null && zoxide init zsh > "$HOME/.zsh_completions/zoxide
 log "byte-compiling zsh files (zcompile)…"
 BP="$(brew --prefix)"
 zsh -c '
-for f in ~/.zshrc ~/.p10k.zsh ~/.zsh_completions/*.zsh \
+for f in ~/.zshrc ~/.zshrc.lazy ~/.p10k.zsh ~/.zsh_completions/*.zsh \
+         ~/.zsh/plugins/zsh-defer/zsh-defer.plugin.zsh \
          "'"$BP"'"/share/powerlevel10k/powerlevel10k.zsh-theme \
          "'"$BP"'"/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
          "'"$BP"'"/share/zsh-fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh \

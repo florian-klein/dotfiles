@@ -5,6 +5,10 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
+# This file is the eager, prompt-critical path only (<10ms). Everything slow
+# (p10k theme, compinit, plugins, atuin/fzf/zoxide) lives in ~/.zshrc.lazy,
+# loaded by zsh-defer right after the first prompt renders.
+
 # ===== Shell Options =====
 bindkey -e                       # Emacs keymap (explicit, independent of $EDITOR)
 setopt AUTO_CD                   # Type a directory name to cd into it
@@ -43,46 +47,18 @@ export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
-# ===== Completion =====
 # uv/uvx completions are cached in ~/.zsh_completions (regenerate with:
 #   uv generate-shell-completion zsh > ~/.zsh_completions/_uv
 #   uvx --generate-shell-completion zsh > ~/.zsh_completions/_uvx)
 fpath=(~/.zsh_completions $fpath)
 
-# compinit with a daily cache: full (secure-dir-check skipped, was
-# ZSH_DISABLE_COMPFIX under oh-my-zsh) once per day, -C otherwise.
-# Staleness check uses a zsh glob qualifier — no `find` process spawn.
-autoload -Uz compinit
-_zcd=(~/.zcompdump(N.mh+24))
-if [[ -n $_zcd || ! -f ~/.zcompdump ]]; then
-  compinit -u
-  { rm -f ~/.zcompdump.zwc; zcompile ~/.zcompdump } &!
-else
-  compinit -C
-fi
-unset _zcd
-
-zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'  # case-insensitive
-zstyle ':completion:*' menu no                             # fzf-tab draws the menu
-zstyle ':completion:*:descriptions' format '[%d]'
-zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
-
-# ===== Plugins (replaces oh-my-zsh) =====
-# HOMEBREW_PREFIX is set by brew shellenv in .zprofile (Apple Silicon or Intel)
-_bp=${HOMEBREW_PREFIX:-/opt/homebrew}
-[[ -r $_bp/share/powerlevel10k/powerlevel10k.zsh-theme ]] && source $_bp/share/powerlevel10k/powerlevel10k.zsh-theme
-[[ -r ~/.zsh/plugins/fzf-tab/fzf-tab.plugin.zsh ]] && source ~/.zsh/plugins/fzf-tab/fzf-tab.plugin.zsh
-[[ -r $_bp/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]] && source $_bp/share/zsh-autosuggestions/zsh-autosuggestions.zsh
-[[ -r $_bp/share/zsh-fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh ]] && source $_bp/share/zsh-fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
-unset _bp
-
-# fzf-tab previews
-zstyle ':fzf-tab:*' use-fzf-default-opts yes
-zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza --tree --icons --level=2 --color=always $realpath'
-zstyle ':fzf-tab:complete:(\\|*/|)z:*' fzf-preview 'eza --tree --icons --level=2 --color=always $realpath'
-
-# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+# fzf colors: Gruvbox accents; fg/bg omitted to inherit white-on-black.
+# Eager because any fzf invocation (scripts included) should pick it up.
+export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border \
+--color=bg+:#3c3836,spinner:#fb4934,hl:#fe8019 \
+--color=header:#fe8019,info:#fabd2f,pointer:#fb4934 \
+--color=marker:#fb4934,fg+:#ffffff,prompt:#fabd2f,hl+:#fe8019 \
+--color=border:#504945,selected-bg:#504945"
 
 # >>> conda initialize (lazy-loaded) >>>
 # Conda is only initialized when first called, saving ~300ms on every shell startup
@@ -107,12 +83,6 @@ for _cmd in activate deactivate mamba; do
 done
 unset _cmd
 # <<< conda initialize <<<
-
-# OCaml related
-[[ ! -r $HOME/.opam/opam-init/init.zsh ]] || source $HOME/.opam/opam-init/init.zsh  > /dev/null 2> /dev/null
-
-# bun completions
-[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
 
 # ===== SSH =====
 # Override ssh to use kitty's ssh kitten when running inside kitty
@@ -242,32 +212,29 @@ bindkey '^[[1;5D' backward-word         # Ctrl+Left: move word backward
 bindkey '^[[H' beginning-of-line        # Home: beginning of line
 bindkey '^[[F' end-of-line              # End: end of line
 
-# ===== Zoxide (fast directory jumping, replaces z) =====
-# Cached init (regenerate: zoxide init zsh > ~/.zsh_completions/zoxide.zsh)
-[[ -r ~/.zsh_completions/zoxide.zsh ]] && source ~/.zsh_completions/zoxide.zsh
-
-# ===== fzf Integration =====
-# Ctrl+T: fuzzy file finder, Alt+C: fuzzy cd (Ctrl+R is handled by atuin below)
-# Cached fzf init (regenerate with: fzf --zsh > ~/.zsh_completions/fzf.zsh)
-[[ -r ~/.zsh_completions/fzf.zsh ]] && source ~/.zsh_completions/fzf.zsh
-export FZF_ALT_C_OPTS="--preview 'eza --tree --icons --level=2 {}'"
-export FZF_CTRL_T_OPTS="--preview 'bat --color=always --line-range :50 {}'"
-# Gruvbox accents; fg/bg omitted so text inherits the terminal's white-on-black
-export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border \
---color=bg+:#3c3836,spinner:#fb4934,hl:#fe8019 \
---color=header:#fe8019,info:#fabd2f,pointer:#fb4934 \
---color=marker:#fb4934,fg+:#ffffff,prompt:#fabd2f,hl+:#fe8019 \
---color=border:#504945,selected-bg:#504945"
-
-# ===== Atuin (history database, Ctrl+R) =====
-# Sourced after fzf so atuin owns the Ctrl+R binding; up arrow stays
-# zsh's history-search-backward. Cached init (regenerate after atuin upgrades:
-# atuin init zsh --disable-up-arrow --disable-ai > ~/.zsh_completions/atuin.zsh)
-[[ -r ~/.zsh_completions/atuin.zsh ]] && source ~/.zsh_completions/atuin.zsh
-
 # ===== PATH Deduplication =====
 # Remove duplicate entries from PATH (keeps first occurrence)
 typeset -U PATH path
 
 # ===== Machine-local config (untracked: SSH host aliases, secrets, etc.) =====
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
+
+# ===== Prompt (powerlevel10k) =====
+# Eager on purpose: deferring the theme makes the first prompt flash zsh's
+# default PS1 before p10k loads (verified frame-by-frame in kitty). ~12ms.
+_bp=${HOMEBREW_PREFIX:-/opt/homebrew}
+[[ -r $_bp/share/powerlevel10k/powerlevel10k.zsh-theme ]] && source $_bp/share/powerlevel10k/powerlevel10k.zsh-theme
+unset _bp
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+# ===== Deferred initialization =====
+# zsh-defer queues ~/.zshrc.lazy to run right after the first prompt renders:
+# compinit, fzf-tab, autosuggestions, syntax highlighting, fzf/atuin/zoxide.
+if [[ -r ~/.zsh/plugins/zsh-defer/zsh-defer.plugin.zsh && -r ~/.zshrc.lazy ]]; then
+  source ~/.zsh/plugins/zsh-defer/zsh-defer.plugin.zsh
+  zsh-defer source ~/.zshrc.lazy
+else
+  # Fallback: load synchronously if zsh-defer isn't installed
+  [[ -r ~/.zshrc.lazy ]] && source ~/.zshrc.lazy
+fi

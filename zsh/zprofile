@@ -24,5 +24,3 @@ export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
 
 export PATH="$PATH:/usr/local/bin"
 
-# OrbStack command-line tools, if installed
-source ~/.orbstack/shell/init.zsh 2>/dev/null || :
