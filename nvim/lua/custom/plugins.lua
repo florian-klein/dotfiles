@@ -155,7 +155,10 @@ local plugins = {
   -- Blink.cmp — Rust-core completion engine, replaces nvim-cmp
   {
     "saghen/blink.cmp",
-    lazy = false, -- must be available when LSP clients initialize (capability merge)
+    -- Off the startup path: lazy.nvim auto-loads this when lspconfig's
+    -- pcall(require, "blink.cmp") capability merge runs at LSP setup, and
+    -- InsertEnter/CmdlineEnter cover non-LSP buffers.
+    event = { "InsertEnter", "CmdlineEnter" },
     version = "*", -- use prebuilt binary from latest release tag
     dependencies = { "L3MON4D3/LuaSnip", "rafamadriz/friendly-snippets" },
     ---@module 'blink.cmp'
@@ -195,10 +198,11 @@ local plugins = {
     "nvim-telescope/telescope-ui-select.nvim",
     lazy = true,
   },
-  -- Auto-install all mason tools on startup (so remote hosts just work)
+  -- Auto-install all mason tools (so remote hosts just work). VeryLazy:
+  -- the registry check runs right after the UI renders instead of before.
   {
     "WhoIsSethDaniel/mason-tool-installer.nvim",
-    lazy = false,
+    event = "VeryLazy",
     dependencies = { "williamboman/mason.nvim" },
     opts = {
       ensure_installed = overrides.mason.ensure_installed,
@@ -212,7 +216,9 @@ local plugins = {
       require("fff.download").download_or_build_binary()
     end,
     opts = {},
-    lazy = false,
+    -- VeryLazy keeps the background file index warming early without
+    -- blocking startup; the keys load it on demand too.
+    event = "VeryLazy",
     keys = {
       { "<leader>ff", function() require("fff").find_files() end, desc = "Find files (fff)" },
       { "<leader>fw", function() require("fff").live_grep() end, desc = "Live grep (fff)" },
