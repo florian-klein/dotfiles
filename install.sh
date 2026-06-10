@@ -109,6 +109,18 @@ mkdir -p "$HOME/.zsh_completions"
 command -v fzf  >/dev/null && fzf --zsh > "$HOME/.zsh_completions/fzf.zsh" && ok "fzf cache"
 command -v atuin >/dev/null && atuin init zsh --disable-up-arrow --disable-ai \
   > "$HOME/.zsh_completions/atuin.zsh" && ok "atuin cache"
+command -v zoxide >/dev/null && zoxide init zsh > "$HOME/.zsh_completions/zoxide.zsh" && ok "zoxide cache"
+
+log "byte-compiling zsh files (zcompile)…"
+BP="$(brew --prefix)"
+zsh -c '
+for f in ~/.zshrc ~/.p10k.zsh ~/.zsh_completions/*.zsh \
+         "'"$BP"'"/share/powerlevel10k/powerlevel10k.zsh-theme \
+         "'"$BP"'"/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
+         "'"$BP"'"/share/zsh-fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh \
+         ~/.zsh/plugins/fzf-tab/fzf-tab.plugin.zsh; do
+  [[ -r $f ]] && zcompile -R -- "$f"
+done' && ok "zsh files compiled (zsh falls back to source automatically if stale)"
 
 [ -f "$HOME/.zshrc.local" ] || {
   printf '# Machine-local zsh config (untracked): SSH aliases, secrets, etc.\n' > "$HOME/.zshrc.local"

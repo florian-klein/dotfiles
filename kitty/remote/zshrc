@@ -36,11 +36,13 @@ setopt INC_APPEND_HISTORY
 
 # ===== Completion =====
 autoload -Uz compinit
-if [[ -n $(find ~/.zcompdump -mtime +1 2>/dev/null) || ! -f ~/.zcompdump ]]; then
+_zcd=(~/.zcompdump(N.mh+24))
+if [[ -n $_zcd || ! -f ~/.zcompdump ]]; then
   compinit -u
 else
   compinit -C
 fi
+unset _zcd
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
 zstyle ':completion:*' menu no
 zstyle ':completion:*:descriptions' format '[%d]'

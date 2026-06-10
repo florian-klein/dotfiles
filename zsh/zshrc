@@ -50,13 +50,17 @@ export PATH="$BUN_INSTALL/bin:$PATH"
 fpath=(~/.zsh_completions $fpath)
 
 # compinit with a daily cache: full (secure-dir-check skipped, was
-# ZSH_DISABLE_COMPFIX under oh-my-zsh) once per day, -C otherwise
+# ZSH_DISABLE_COMPFIX under oh-my-zsh) once per day, -C otherwise.
+# Staleness check uses a zsh glob qualifier — no `find` process spawn.
 autoload -Uz compinit
-if [[ -n $(find ~/.zcompdump -mtime +1 2>/dev/null) || ! -f ~/.zcompdump ]]; then
+_zcd=(~/.zcompdump(N.mh+24))
+if [[ -n $_zcd || ! -f ~/.zcompdump ]]; then
   compinit -u
+  { rm -f ~/.zcompdump.zwc; zcompile ~/.zcompdump } &!
 else
   compinit -C
 fi
+unset _zcd
 
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'  # case-insensitive
 zstyle ':completion:*' menu no                             # fzf-tab draws the menu
@@ -239,7 +243,8 @@ bindkey '^[[H' beginning-of-line        # Home: beginning of line
 bindkey '^[[F' end-of-line              # End: end of line
 
 # ===== Zoxide (fast directory jumping, replaces z) =====
-eval "$(zoxide init zsh)"
+# Cached init (regenerate: zoxide init zsh > ~/.zsh_completions/zoxide.zsh)
+[[ -r ~/.zsh_completions/zoxide.zsh ]] && source ~/.zsh_completions/zoxide.zsh
 
 # ===== fzf Integration =====
 # Ctrl+T: fuzzy file finder, Alt+C: fuzzy cd (Ctrl+R is handled by atuin below)
