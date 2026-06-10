@@ -1,3 +1,7 @@
+# Skip /etc/zprofile and /etc/zshrc (~5ms: path_helper spawn + Apple Terminal
+# session restore we don't use). /etc/paths.d is merged manually in .zprofile.
+setopt no_global_rcs
+
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 
 export PATH="$PATH:$HOME/.foundry/bin"

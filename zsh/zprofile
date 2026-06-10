@@ -24,3 +24,11 @@ export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
 
 export PATH="$PATH:/usr/local/bin"
 
+# no_global_rcs (set in .zshenv) skips /etc/zprofile's path_helper; merge the
+# base system paths and /etc/paths.d entries here instead (pure zsh, no spawn)
+path+=(/usr/bin /bin /usr/sbin /sbin)
+for _f in /etc/paths.d/*(N); do
+  while IFS= read -r _p; do [[ -d $_p ]] && path+=("$_p"); done < "$_f"
+done
+unset _f _p
+
