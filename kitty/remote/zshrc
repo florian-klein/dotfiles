@@ -34,34 +34,51 @@ setopt HIST_VERIFY
 setopt SHARE_HISTORY
 setopt INC_APPEND_HISTORY
 
-# ===== Completion =====
-autoload -Uz compinit
-_zcd=(~/.zcompdump(N.mh+24))
-if [[ -n $_zcd || ! -f ~/.zcompdump ]]; then
-  compinit -u
+# ===== Prompt (powerlevel10k — eager: it IS the first prompt) =====
+[[ -r ~/.zsh/plugins/powerlevel10k/powerlevel10k.zsh-theme ]] && source ~/.zsh/plugins/powerlevel10k/powerlevel10k.zsh-theme
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+# ===== Deferred initialization =====
+# Same trick as the local zshrc: completion + plugins load right after the
+# first prompt via zsh-defer. Falls back to synchronous loading on hosts
+# that don't have zsh-defer yet, and self-heals by cloning it in the
+# background for the next login.
+if [[ -r ~/.zsh/plugins/zsh-defer/zsh-defer.plugin.zsh ]]; then
+  source ~/.zsh/plugins/zsh-defer/zsh-defer.plugin.zsh
+  _zd() { zsh-defer "$@" }
 else
-  compinit -C
+  _zd() { "$@" }
+  if [[ -o interactive ]] && command -v git >/dev/null && [[ ! -d ~/.zsh/plugins/zsh-defer ]]; then
+    (git clone --quiet --depth=1 https://github.com/romkatv/zsh-defer ~/.zsh/plugins/zsh-defer &) >/dev/null 2>&1
+  fi
 fi
-unset _zcd
+
+_remote_compinit() {
+  autoload -Uz compinit
+  local -a zcd
+  zcd=(~/.zcompdump(N.mh+24))
+  if [[ -n $zcd || ! -f ~/.zcompdump ]]; then
+    compinit -u
+  else
+    compinit -C
+  fi
+}
+_zd _remote_compinit
+
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
 zstyle ':completion:*' menu no
 zstyle ':completion:*:descriptions' format '[%d]'
-
-# ===== Plugins (installed by bootstrap into ~/.zsh/plugins) =====
-_plug=~/.zsh/plugins
-[[ -r $_plug/powerlevel10k/powerlevel10k.zsh-theme ]] && source $_plug/powerlevel10k/powerlevel10k.zsh-theme
-[[ -r $_plug/fzf-tab/fzf-tab.plugin.zsh ]] && source $_plug/fzf-tab/fzf-tab.plugin.zsh
-[[ -r $_plug/zsh-autosuggestions/zsh-autosuggestions.zsh ]] && source $_plug/zsh-autosuggestions/zsh-autosuggestions.zsh
-[[ -r $_plug/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh ]] && source $_plug/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
-unset _plug
-
 zstyle ':fzf-tab:*' use-fzf-default-opts yes
 if command -v eza >/dev/null; then
   zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza --tree --icons --level=2 --color=always $realpath'
 fi
 
-# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+_plug=~/.zsh/plugins
+[[ -r $_plug/fzf-tab/fzf-tab.plugin.zsh ]] && _zd source $_plug/fzf-tab/fzf-tab.plugin.zsh
+[[ -r $_plug/zsh-autosuggestions/zsh-autosuggestions.zsh ]] && _zd source $_plug/zsh-autosuggestions/zsh-autosuggestions.zsh
+[[ -r $_plug/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh ]] && _zd source $_plug/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
+unset _plug
 
 # ===== Aliases =====
 if command -v eza >/dev/null; then
@@ -127,15 +144,16 @@ bindkey '^[[1;5D' backward-word
 bindkey '^[[H' beginning-of-line
 bindkey '^[[F' end-of-line
 
-# ===== Zoxide =====
-command -v zoxide >/dev/null && eval "$(zoxide init zsh)"
-
-# ===== fzf Integration (Ctrl+R history, Ctrl+T files, Alt+C cd) =====
-if command -v fzf >/dev/null; then
-  source <(fzf --zsh 2>/dev/null)
-  command -v eza >/dev/null && export FZF_ALT_C_OPTS="--preview 'eza --tree --icons --level=2 {}'"
-  command -v bat >/dev/null && export FZF_CTRL_T_OPTS="--preview 'bat --color=always --line-range :50 {}'"
-fi
+# ===== Zoxide + fzf (deferred — both spawn a process for their init) =====
+_remote_tools() {
+  command -v zoxide >/dev/null && eval "$(zoxide init zsh)"
+  if command -v fzf >/dev/null; then
+    eval "$(fzf --zsh 2>/dev/null)"
+    command -v eza >/dev/null && export FZF_ALT_C_OPTS="--preview 'eza --tree --icons --level=2 {}'"
+    command -v bat >/dev/null && export FZF_CTRL_T_OPTS="--preview 'bat --color=always --line-range :50 {}'"
+  fi
+}
+_zd _remote_tools
 # Gruvbox accents; fg/bg omitted so text inherits the terminal's white-on-black
 export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border \
 --color=bg+:#3c3836,spinner:#fb4934,hl:#fe8019 \

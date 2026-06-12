@@ -64,7 +64,8 @@ if have git; then
     powerlevel10k=romkatv/powerlevel10k \
     zsh-autosuggestions=zsh-users/zsh-autosuggestions \
     fast-syntax-highlighting=zdharma-continuum/fast-syntax-highlighting \
-    fzf-tab=Aloxaf/fzf-tab
+    fzf-tab=Aloxaf/fzf-tab \
+    zsh-defer=romkatv/zsh-defer
   do
     name=${spec%%=*}; repo=${spec#*=}
     if [ ! -d "$PLUG/$name" ]; then
