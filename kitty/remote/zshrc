@@ -13,6 +13,16 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
+# ===== tmux config self-heal =====
+# A persistent tmux server reads ~/.tmux.conf only at server start, so the
+# copy kitten ssh syncs on each connect never reaches an already-running
+# server (e.g. `mouse on` for click-to-focus panes stays off). Re-apply it
+# globally on login, before attaching — cheap, idempotent, backgrounded.
+# Gated to outside-tmux so it runs once per ssh login, not per new pane.
+if [[ -o interactive && -z $TMUX ]] && command -v tmux >/dev/null 2>&1 && tmux ls >/dev/null 2>&1; then
+  ( tmux source-file ~/.tmux.conf >/dev/null 2>&1 & )
+fi
+
 # ===== Environment =====
 export PATH="$HOME/.local/bin:$HOME/.fzf/bin:$PATH"
 command -v nvim >/dev/null && export EDITOR=nvim
